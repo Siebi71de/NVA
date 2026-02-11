@@ -1,0 +1,521 @@
+{
+  "meta": {
+    "title": "\n    Vollständiges Eingabeformular für PSVaG Leistungsverwaltung\n    \n    Workflow:\n    1. Eingabedaten (Identifikation, Stammdaten, Gehalt)\n    2. Unverzallbarkeitsprüfung (nur bei Austrittsdatum)\n    3. Berechnete Leistung (mit Formel-Prüfung)\n    4. Gesamtübersicht (Leistungsbescheid)\n    ",
+    "class_name": "MitarbeiterFormular",
+    "generated_at": "2026-02-01T16:54:02.343779"
+  },
+  "config": {
+    "name": "Versorgungsordnung für die Angestellten der Muster GmbH vom 01.01.2010",
+    "ist_insolvenzfall": true,
+    "insolvenzdatum": "2026-01-01",
+    "stichtag": "2003-01-01",
+    "alt_betrag_pro_jahr": 30.0,
+    "neu_versorgungssatz": 0.002,
+    "neu_max_versorgungsgrad": 0.05,
+    "kapital_wahlrecht": true,
+    "kapital_bagatellgrenze": 100.0,
+    "kapital_faktor": 120.0,
+    "invaliditaet_schutz": true,
+    "invaliditaet_wartezeit": 5,
+    "hinterbliebene_versorgung": true,
+    "hinterbliebene_witwe_satz": 60.0,
+    "hinterbliebene_waisen_satz": 12.0
+  },
+  "input_fields": [
+    {
+      "id": "letztes_gehalt",
+      "field_type": "input",
+      "label": "Letztes Bruttomonatsgehalt (in €)",
+      "type": "number",
+      "required": false,
+      "hint": "Erforderlich bei Neu-Regelung (Eintritt ab 01.01.2003)",
+      "placeholder": "z.B. 4500.00",
+      "group": "gehalt",
+      "order": 1,
+      "validation": [
+        "positive"
+      ],
+      "min_value": 0,
+      "depends_on": "eintrittsdatum",
+      "show_when": "eintrittsdatum >= '2003-01-01'",
+      "width": "full"
+    },
+    {
+      "id": "id",
+      "field_type": "input",
+      "label": "Personal-Nr.",
+      "type": "text",
+      "required": true,
+      "hint": "Eindeutige Personalnummer",
+      "placeholder": "z.B. MA-001",
+      "group": "identifikation",
+      "order": 1,
+      "validation": [
+        "required"
+      ],
+      "width": "full"
+    },
+    {
+      "id": "name",
+      "field_type": "input",
+      "label": "Name",
+      "type": "text",
+      "required": true,
+      "hint": "Vor- und Nachname",
+      "placeholder": "Max Mustermann",
+      "group": "identifikation",
+      "order": 2,
+      "validation": [
+        "required"
+      ],
+      "width": "full"
+    },
+    {
+      "id": "geburtsdatum",
+      "field_type": "input",
+      "label": "Geburtsdatum",
+      "type": "date",
+      "required": true,
+      "hint": "Für Berechnung des gesetzlichen Rentenalters nach SGB VI",
+      "group": "stammdaten",
+      "order": 1,
+      "validation": [
+        "required",
+        "date_in_past"
+      ],
+      "width": "full"
+    },
+    {
+      "id": "eintrittsdatum",
+      "field_type": "input",
+      "label": "Eintrittsdatum im Unternehmen",
+      "type": "date",
+      "required": true,
+      "hint": "Beginn des Arbeitsverhältnisses bei der Muster GmbH",
+      "group": "stammdaten",
+      "order": 2,
+      "validation": [
+        "required",
+        "date_in_past",
+        "date_after_geburtsdatum"
+      ],
+      "width": "full"
+    },
+    {
+      "id": "austrittsdatum",
+      "field_type": "input",
+      "label": "Austrittsdatum (leer = aktiver Mitarbeiter)",
+      "type": "date",
+      "required": false,
+      "hint": "Nur bei ausgeschiedenen Mitarbeitern oder Insolvenzfall",
+      "group": "stammdaten",
+      "order": 3,
+      "validation": [
+        "date_after_eintrittsdatum"
+      ],
+      "width": "full"
+    }
+  ],
+  "calculated_fields": [
+    {
+      "id": "dienstzeit",
+      "field_type": "calculated",
+      "label": "Potenzielle Dienstzeit (Eintritt → planm. Rentenbeginn)",
+      "formel": "Rentenbeginn - Eintrittsdatum",
+      "requires": [
+        "eintrittsdatum",
+        "geburtsdatum"
+      ],
+      "einheit": "Jahre",
+      "editable": true,
+      "needs_confirmation": true,
+      "confirmation_threshold": 3,
+      "group": "berechnungen",
+      "hint": "Volle Jahre von Eintritt bis geplantem Rentenbeginn",
+      "precision": 0,
+      "function_name": "betriebszugehoerigkeit_jahre"
+    },
+    {
+      "id": "mn_faktor",
+      "field_type": "calculated",
+      "label": "m/n-Faktor (Kürzung bei vorzeitigem Austritt)",
+      "formel": "m Tage / n Tage × 100",
+      "requires": [
+        "eintrittsdatum",
+        "austrittsdatum",
+        "geburtsdatum"
+      ],
+      "einheit": "%",
+      "editable": true,
+      "needs_confirmation": true,
+      "confirmation_threshold": 3,
+      "group": "berechnungen",
+      "hint": "Prozentualer Faktor für vorzeitigen Austritt (taggenau)",
+      "precision": 2,
+      "function_name": "mn_faktor_prozent"
+    },
+    {
+      "id": "grundrente_alt",
+      "field_type": "calculated",
+      "label": "Monatliche Betriebsrente (Alt-Regelung)",
+      "formel": "Dienstjahre × 30€ [× m/n bei Austritt]",
+      "requires": [
+        "eintrittsdatum",
+        "geburtsdatum"
+      ],
+      "einheit": "€/Monat",
+      "editable": true,
+      "needs_confirmation": true,
+      "confirmation_threshold": 3,
+      "group": "berechnungen",
+      "hint": "Alt-Regelung: 30€ pro Dienstjahr",
+      "precision": 2,
+      "function_name": "grundrente_alt_berechnen"
+    },
+    {
+      "id": "grundrente_neu",
+      "field_type": "calculated",
+      "label": "Monatliche Betriebsrente (Neu-Regelung)",
+      "formel": "Dienstjahre × 0,2% × Gehalt [× m/n bei Austritt]",
+      "requires": [
+        "eintrittsdatum",
+        "geburtsdatum",
+        "letztes_gehalt"
+      ],
+      "einheit": "€/Monat",
+      "editable": true,
+      "needs_confirmation": true,
+      "confirmation_threshold": 3,
+      "group": "berechnungen",
+      "hint": "Neu-Regelung: 0,2% vom Gehalt pro Dienstjahr (max. 5%)",
+      "precision": 2,
+      "function_name": "grundrente_neu_berechnen"
+    }
+  ],
+  "all_fields": [
+    {
+      "id": "letztes_gehalt",
+      "field_type": "input",
+      "label": "Letztes Bruttomonatsgehalt (in €)",
+      "type": "number",
+      "required": false,
+      "hint": "Erforderlich bei Neu-Regelung (Eintritt ab 01.01.2003)",
+      "placeholder": "z.B. 4500.00",
+      "group": "gehalt",
+      "order": 1,
+      "validation": [
+        "positive"
+      ],
+      "min_value": 0,
+      "depends_on": "eintrittsdatum",
+      "show_when": "eintrittsdatum >= '2003-01-01'",
+      "width": "full"
+    },
+    {
+      "id": "id",
+      "field_type": "input",
+      "label": "Personal-Nr.",
+      "type": "text",
+      "required": true,
+      "hint": "Eindeutige Personalnummer",
+      "placeholder": "z.B. MA-001",
+      "group": "identifikation",
+      "order": 1,
+      "validation": [
+        "required"
+      ],
+      "width": "full"
+    },
+    {
+      "id": "name",
+      "field_type": "input",
+      "label": "Name",
+      "type": "text",
+      "required": true,
+      "hint": "Vor- und Nachname",
+      "placeholder": "Max Mustermann",
+      "group": "identifikation",
+      "order": 2,
+      "validation": [
+        "required"
+      ],
+      "width": "full"
+    },
+    {
+      "id": "geburtsdatum",
+      "field_type": "input",
+      "label": "Geburtsdatum",
+      "type": "date",
+      "required": true,
+      "hint": "Für Berechnung des gesetzlichen Rentenalters nach SGB VI",
+      "group": "stammdaten",
+      "order": 1,
+      "validation": [
+        "required",
+        "date_in_past"
+      ],
+      "width": "full"
+    },
+    {
+      "id": "eintrittsdatum",
+      "field_type": "input",
+      "label": "Eintrittsdatum im Unternehmen",
+      "type": "date",
+      "required": true,
+      "hint": "Beginn des Arbeitsverhältnisses bei der Muster GmbH",
+      "group": "stammdaten",
+      "order": 2,
+      "validation": [
+        "required",
+        "date_in_past",
+        "date_after_geburtsdatum"
+      ],
+      "width": "full"
+    },
+    {
+      "id": "austrittsdatum",
+      "field_type": "input",
+      "label": "Austrittsdatum (leer = aktiver Mitarbeiter)",
+      "type": "date",
+      "required": false,
+      "hint": "Nur bei ausgeschiedenen Mitarbeitern oder Insolvenzfall",
+      "group": "stammdaten",
+      "order": 3,
+      "validation": [
+        "date_after_eintrittsdatum"
+      ],
+      "width": "full"
+    },
+    {
+      "id": "dienstzeit",
+      "field_type": "calculated",
+      "label": "Potenzielle Dienstzeit (Eintritt → planm. Rentenbeginn)",
+      "formel": "Rentenbeginn - Eintrittsdatum",
+      "requires": [
+        "eintrittsdatum",
+        "geburtsdatum"
+      ],
+      "einheit": "Jahre",
+      "editable": true,
+      "needs_confirmation": true,
+      "confirmation_threshold": 3,
+      "group": "berechnungen",
+      "hint": "Volle Jahre von Eintritt bis geplantem Rentenbeginn",
+      "precision": 0,
+      "function_name": "betriebszugehoerigkeit_jahre"
+    },
+    {
+      "id": "mn_faktor",
+      "field_type": "calculated",
+      "label": "m/n-Faktor (Kürzung bei vorzeitigem Austritt)",
+      "formel": "m Tage / n Tage × 100",
+      "requires": [
+        "eintrittsdatum",
+        "austrittsdatum",
+        "geburtsdatum"
+      ],
+      "einheit": "%",
+      "editable": true,
+      "needs_confirmation": true,
+      "confirmation_threshold": 3,
+      "group": "berechnungen",
+      "hint": "Prozentualer Faktor für vorzeitigen Austritt (taggenau)",
+      "precision": 2,
+      "function_name": "mn_faktor_prozent"
+    },
+    {
+      "id": "grundrente_alt",
+      "field_type": "calculated",
+      "label": "Monatliche Betriebsrente (Alt-Regelung)",
+      "formel": "Dienstjahre × 30€ [× m/n bei Austritt]",
+      "requires": [
+        "eintrittsdatum",
+        "geburtsdatum"
+      ],
+      "einheit": "€/Monat",
+      "editable": true,
+      "needs_confirmation": true,
+      "confirmation_threshold": 3,
+      "group": "berechnungen",
+      "hint": "Alt-Regelung: 30€ pro Dienstjahr",
+      "precision": 2,
+      "function_name": "grundrente_alt_berechnen"
+    },
+    {
+      "id": "grundrente_neu",
+      "field_type": "calculated",
+      "label": "Monatliche Betriebsrente (Neu-Regelung)",
+      "formel": "Dienstjahre × 0,2% × Gehalt [× m/n bei Austritt]",
+      "requires": [
+        "eintrittsdatum",
+        "geburtsdatum",
+        "letztes_gehalt"
+      ],
+      "einheit": "€/Monat",
+      "editable": true,
+      "needs_confirmation": true,
+      "confirmation_threshold": 3,
+      "group": "berechnungen",
+      "hint": "Neu-Regelung: 0,2% vom Gehalt pro Dienstjahr (max. 5%)",
+      "precision": 2,
+      "function_name": "grundrente_neu_berechnen"
+    }
+  ],
+  "groups": {
+    "gehalt": [
+      {
+        "id": "letztes_gehalt",
+        "field_type": "input",
+        "label": "Letztes Bruttomonatsgehalt (in €)",
+        "type": "number",
+        "required": false,
+        "hint": "Erforderlich bei Neu-Regelung (Eintritt ab 01.01.2003)",
+        "placeholder": "z.B. 4500.00",
+        "group": "gehalt",
+        "order": 1,
+        "validation": [
+          "positive"
+        ],
+        "min_value": 0,
+        "depends_on": "eintrittsdatum",
+        "show_when": "eintrittsdatum >= '2003-01-01'",
+        "width": "full"
+      }
+    ],
+    "identifikation": [
+      {
+        "id": "id",
+        "field_type": "input",
+        "label": "Personal-Nr.",
+        "type": "text",
+        "required": true,
+        "hint": "Eindeutige Personalnummer",
+        "placeholder": "z.B. MA-001",
+        "group": "identifikation",
+        "order": 1,
+        "validation": [
+          "required"
+        ],
+        "width": "full"
+      },
+      {
+        "id": "name",
+        "field_type": "input",
+        "label": "Name",
+        "type": "text",
+        "required": true,
+        "hint": "Vor- und Nachname",
+        "placeholder": "Max Mustermann",
+        "group": "identifikation",
+        "order": 2,
+        "validation": [
+          "required"
+        ],
+        "width": "full"
+      }
+    ],
+    "stammdaten": [
+      {
+        "id": "geburtsdatum",
+        "field_type": "input",
+        "label": "Geburtsdatum",
+        "type": "date",
+        "required": true,
+        "hint": "Für Berechnung des gesetzlichen Rentenalters nach SGB VI",
+        "group": "stammdaten",
+        "order": 1,
+        "validation": [
+          "required",
+          "date_in_past"
+        ],
+        "width": "full"
+      },
+      {
+        "id": "eintrittsdatum",
+        "field_type": "input",
+        "label": "Eintrittsdatum im Unternehmen",
+        "type": "date",
+        "required": true,
+        "hint": "Beginn des Arbeitsverhältnisses bei der Muster GmbH",
+        "group": "stammdaten",
+        "order": 2,
+        "validation": [
+          "required",
+          "date_in_past",
+          "date_after_geburtsdatum"
+        ],
+        "width": "full"
+      },
+      {
+        "id": "austrittsdatum",
+        "field_type": "input",
+        "label": "Austrittsdatum (leer = aktiver Mitarbeiter)",
+        "type": "date",
+        "required": false,
+        "hint": "Nur bei ausgeschiedenen Mitarbeitern oder Insolvenzfall",
+        "group": "stammdaten",
+        "order": 3,
+        "validation": [
+          "date_after_eintrittsdatum"
+        ],
+        "width": "full"
+      }
+    ]
+  },
+  "workflow": {
+    "steps": [
+      {
+        "order": 1,
+        "title": "Eingabedaten",
+        "description": "Erfassung der Mitarbeiterdaten aus Personaldatenbank",
+        "groups": [
+          "identifikation",
+          "stammdaten",
+          "gehalt"
+        ],
+        "component_type": "form",
+        "show_if": null
+      },
+      {
+        "order": 2,
+        "title": "Unverzallbarkeitsprüfung",
+        "description": "Prüfung nach BetrAVG §1b",
+        "groups": [],
+        "component_type": "custom",
+        "show_if": "has_austrittsdatum"
+      },
+      {
+        "order": 3,
+        "title": "Berechnete Leistung (überschreibbar)",
+        "description": "Berechnung mit Formel-Prüfung",
+        "groups": [],
+        "component_type": "calculation",
+        "show_if": null
+      },
+      {
+        "order": 4,
+        "title": "PSVaG Leistungsberechnung",
+        "description": "Gesamtübersicht für Leistungsbescheid",
+        "groups": [],
+        "component_type": "summary",
+        "show_if": null
+      }
+    ]
+  },
+  "validation_rules": {
+    "rules": [
+      "date_after_geburtsdatum",
+      "date_in_past",
+      "date_after_eintrittsdatum",
+      "positive",
+      "required"
+    ],
+    "implementations": {
+      "date_after_geburtsdatum": "ValidationRule.date_after_geburtsdatum",
+      "date_in_past": "ValidationRule.date_in_past",
+      "date_after_eintrittsdatum": "ValidationRule.date_after_eintrittsdatum",
+      "positive": "ValidationRule.positive",
+      "required": "ValidationRule.required"
+    }
+  }
+}

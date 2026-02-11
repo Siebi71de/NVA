@@ -1,0 +1,2 @@
+# Requirements für Streamlit Cloud Deployment
+streamlit>=1.28.0
