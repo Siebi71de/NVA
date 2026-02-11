@@ -305,6 +305,27 @@ class VersorgungsBerechnung:
         
         return max(0, jahre)
     
+    def mn_faktor(
+        self,
+        eintrittsdatum: date,
+        austrittsdatum: date,
+        geburtsdatum: date
+    ) -> tuple[float, int, int]:
+        """
+        Berechnet m/n-Kürzungsfaktor bei vorzeitigem Austritt
+        Returns: (faktor, m_tage, n_tage)
+        """
+        rentenbeginn = self.rentenbeginn(geburtsdatum)
+        
+        m = self.betriebszugehoerigkeit_tage(eintrittsdatum, austrittsdatum)
+        n = self.betriebszugehoerigkeit_tage(eintrittsdatum, rentenbeginn)
+        
+        if n == 0:
+            return (0.0, m, n)
+        
+        faktor = m / n
+        return (faktor, m, n)
+    
     @calculated_field(
         key='mn_faktor',
         label='m/n-Faktor (Kürzung bei vorzeitigem Austritt)',
@@ -328,15 +349,8 @@ class VersorgungsBerechnung:
         Berechnet m/n-Kürzungsfaktor bei vorzeitigem Austritt
         Returns: Prozent (0-100)
         """
-        rentenbeginn = self.rentenbeginn(geburtsdatum)
-        
-        m = self.betriebszugehoerigkeit_tage(eintrittsdatum, austrittsdatum)
-        n = self.betriebszugehoerigkeit_tage(eintrittsdatum, rentenbeginn)
-        
-        if n == 0:
-            return 0.0
-        
-        return (m / n) * 100
+        faktor, m, n = self.mn_faktor(eintrittsdatum, austrittsdatum, geburtsdatum)
+        return faktor * 100
     
     @calculated_field(
         key='grundrente_alt',
